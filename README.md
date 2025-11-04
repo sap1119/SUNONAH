@@ -101,78 +101,147 @@ graph TD
     style API fill:#dfd
 ```
 
-### Voice Agent Implementation Details
+### SUNONAH System Architecture
 ```mermaid
 graph TD
-    subgraph "Telephony Integration"
-        Phone[Phone Call] --> Gateway[Telephony Gateway]
-        Gateway --> CallHandler[Call Handler]
-        CallHandler --> SessionMgr[Session Manager]
-    end
-
-    subgraph "Voice Processing"
-        STT[Speech-to-Text]
-        VAD[Voice Activity Detection]
-        NR[Noise Reduction]
-        TTS[Text-to-Speech]
-    end
-
-    subgraph "Core AI Processing"
-        LLM[LLM Engine]
-        Context[Context Manager]
-        KB[Knowledge Base]
+    %% Input Handlers
+    subgraph "Input Handlers"
+        direction TB
+        Phone[Phone Call] --> TelephonyH[Telephony Handler]
+        Chat[Chat] --> DefaultH[Default Handler]
         
-        subgraph "Agent Functions"
-            Intent[Intent Analysis]
-            Dialog[Dialog Management]
-            Response[Response Generation]
+        subgraph "Telephony Providers"
+            TelephonyH --> Exotel[Exotel]
+            TelephonyH --> Plivo[Plivo]
+            TelephonyH --> Twilio[Twilio]
         end
     end
 
-    %% Call Flow
-    CallHandler --> VAD
-    VAD --> NR
-    NR --> STT
-    STT --> Intent
-    Intent --> LLM
-    LLM <--> Context
-    LLM <--> KB
-    LLM --> Dialog
-    Dialog --> Response
-    Response --> TTS
-    TTS --> CallHandler
-
-    %% Session Management
-    SessionMgr --> Context
-    SessionMgr --> Dialog
-
-    style LLM fill:#f9f,stroke:#333,stroke-width:2px
-    style STT fill:#bbf,stroke:#333,stroke-width:2px
-    style TTS fill:#bbf,stroke:#333,stroke-width:2px
-```
-
-### Call Flow Sequence
-```mermaid
-sequenceDiagram
-    participant U as User/Caller
-    participant T as Telephony Gateway
-    participant S as Speech Services
-    participant A as AI Engine
-    participant V as Voice Synthesis
-
-    U->>T: Incoming Call
-    T->>S: Start Speech Recognition
-    
-    loop Conversation
-        U->>S: Voice Input
-        S->>A: Transcribed Text
-        A->>A: Process & Generate Response
-        A->>V: Generate Speech
-        V->>U: Voice Response
+    %% Voice Processing
+    subgraph "Speech Services"
+        direction TB
+        subgraph "Transcription"
+            AT[Azure Transcriber]
+            DGT[Deepgram Transcriber]
+            VAD[Voice Activity Detection]
+        end
+        
+        subgraph "Synthesis"
+            AzureS[Azure Synthesizer]
+            OpenAIS[OpenAI Synthesizer]
+            PollyS[Polly Synthesizer]
+            DGS[Deepgram Synthesizer]
+        end
     end
 
-    U->>T: End Call
-    T->>A: Save Conversation Context
+    %% Core Agent System
+    subgraph "Agent System"
+        direction TB
+        subgraph "Agent Types"
+            CCA[Contextual Conversational]
+            EA[Extraction Agent]
+            GBCA[Graph Based Conversational]
+            SA[Summarization Agent]
+            WA[Webhook Agent]
+        end
+        
+        subgraph "Classification"
+            Deberta[DeBERTa Classifier]
+            ClassificationS[Classification System]
+        end
+    end
+
+    %% Memory and Cache
+    subgraph "Memory Management"
+        direction TB
+        Cache[Cache System]
+        VectorC[Vector Cache]
+        InMemoryC[InMemory Scalar Cache]
+    end
+
+    %% LLM Integration
+    subgraph "LLM Services"
+        direction TB
+        OpenAILLM[OpenAI LLM]
+        LiteLLM[LiteLLM Integration]
+        LLMTypes[LLM Types]
+        Streaming[Streaming Service]
+    end
+
+    %% Analytics and Helpers
+    subgraph "Support Services"
+        direction TB
+        Analytics[Analytics Helpers]
+        Logger[Logger Config]
+        RAGService[RAG Service Client]
+        FuncCalling[Function Calling]
+    end
+
+    %% Main Flow Connections
+    TelephonyH --> VAD
+    DefaultH --> CCA
+    VAD --> AT & DGT
+    AT & DGT --> AgentManager[Agent Manager]
+    AgentManager --> CCA & EA & GBCA & SA & WA
+    AgentManager <--> Cache
+    Cache <--> VectorC & InMemoryC
+    CCA & EA & GBCA & SA & WA <--> OpenAILLM & LiteLLM
+    OpenAILLM & LiteLLM --> AzureS & OpenAIS & PollyS & DGS
+    
+    %% Support Connections
+    AgentManager <--> Analytics
+    AgentManager <--> RAGService
+    Logger --> Analytics
+    ClassificationS --> Deberta
+
+    style AgentManager fill:#f9f,stroke:#333,stroke-width:2px
+    style OpenAILLM fill:#bbf,stroke:#333,stroke-width:2px
+    style Cache fill:#bfb,stroke:#333,stroke-width:2px
+```
+
+### Detailed Call Flow
+```mermaid
+sequenceDiagram
+    participant User
+    participant TProvider as Telephony Provider
+    participant VAD as Voice Detection
+    participant Trans as Transcription Service
+    participant Agent as Agent Manager
+    participant LLM as LLM Service
+    participant Synth as Speech Synthesis
+    participant Cache as Memory System
+
+    User->>TProvider: Incoming Call
+    TProvider->>VAD: Audio Stream
+    VAD->>Trans: Processed Audio
+    Trans->>Agent: Transcribed Text
+
+    rect rgb(200, 200, 255)
+        Note over Agent,LLM: Agent Processing
+        Agent->>Cache: Fetch Context
+        Agent->>LLM: Generate Response
+        LLM-->>Agent: Response Text
+        Agent->>Cache: Update Context
+    end
+
+    Agent->>Synth: Text for Speech
+    Synth-->>TProvider: Audio Response
+    TProvider-->>User: Voice Response
+
+    loop Active Call
+        User->>TProvider: Continued Dialog
+        TProvider->>VAD: Stream Audio
+        VAD->>Trans: Process
+        Trans->>Agent: Text
+        Agent->>LLM: Process
+        LLM-->>Agent: Response
+        Agent->>Synth: Synthesize
+        Synth-->>User: Respond
+    end
+
+    User->>TProvider: End Call
+    TProvider->>Agent: Finalize Session
+    Agent->>Cache: Save Context
 ```
 
 These diagrams illustrate the voice-specific components and flows of the SUNONAH framework. For more detailed technical information, please refer to the [Architecture Documentation](docs/ARCHITECTURE.md).
