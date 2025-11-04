@@ -3,6 +3,7 @@
 SUNONAH is a versatile conversational AI framework that enables natural voice and text interactions through multiple channels. This guide will help you set up and run the project, even if you're new to programming.
 
 ## Table of Contents
+- [System Architecture](#system-architecture)
 - [Prerequisites](#prerequisites)
 - [Installation Guide](#installation-guide)
   - [Basic Setup](#basic-setup)
@@ -11,6 +12,105 @@ SUNONAH is a versatile conversational AI framework that enables natural voice an
 - [Project Structure](#project-structure)
 - [Configuration Guide](#configuration-guide)
 - [Troubleshooting](#troubleshooting)
+
+## System Architecture
+
+### Overview
+```mermaid
+graph TD
+    User[User Input] --> InputHandler[Input Handler]
+    InputHandler --> TextProcessor[Text Processor]
+    
+    subgraph Core Agent
+        TextProcessor --> ContextManager[Context Manager]
+        ContextManager --> LLMEngine[LLM Engine]
+        LLMEngine --> ResponseGenerator[Response Generator]
+        ContextManager <--> Memory[Memory/Cache]
+    end
+    
+    ResponseGenerator --> OutputHandler[Output Handler]
+    OutputHandler --> UserResponse[User Response]
+    Memory <--> VectorStore[Vector Store]
+```
+
+### Input Processing Flow
+```mermaid
+graph LR
+    A[User Input] --> B[Input Handler]
+    B --> C[Text Normalizer]
+    B --> D[Speech-to-Text]
+    C --> E[Language Detection]
+    D --> E
+    E --> F[Preprocessed Input]
+```
+
+### Memory Management System
+```mermaid
+graph TD
+    A[New Input] --> B[Memory Router]
+    B --> C[Short-term Memory]
+    B --> D[Long-term Memory]
+    
+    C --> E[In-Memory Cache]
+    D --> F[Vector Store]
+    
+    E --> G[Context Window]
+    F --> G
+    
+    G --> H[Context Selection]
+    H --> I[Final Context]
+```
+
+### Response Generation Pipeline
+```mermaid
+graph LR
+    A[Context] --> B[Template Selection]
+    B --> C[Parameter Setting]
+    C --> D[Generation]
+    D --> E[Validation]
+    E --> F[Formatting]
+    F --> G[Final Response]
+    
+    H[Safety Checks] --> E
+    I[Quality Metrics] --> E
+```
+
+### Multi-Agent Collaboration System
+```mermaid
+graph TD
+    A[User Query] --> B[Task Distributor]
+    B --> C[Agent 1: Research]
+    B --> D[Agent 2: Analysis]
+    B --> E[Agent 3: Generation]
+    C --> F[Aggregator]
+    D --> F
+    E --> F
+    F --> G[Final Response]
+    
+    subgraph "Communication Bus"
+    H[Agent Registry]
+    I[Message Queue]
+    J[State Manager]
+    end
+```
+
+### Enterprise Integration Architecture
+```mermaid
+graph TD
+    A[SUNONAH Agent] --> B[Integration Layer]
+    B --> C[CRM Systems]
+    B --> D[ERP Systems]
+    B --> E[Ticketing Systems]
+    B --> F[Knowledge Bases]
+    
+    subgraph Security Layer
+    G[Authentication]
+    H[Authorization]
+    I[Encryption]
+    end
+```
+
+These diagrams illustrate the key components and flows of the SUNONAH framework. For more detailed technical information, please refer to the [Architecture Documentation](docs/ARCHITECTURE.md).
 
 ## Prerequisites
 
