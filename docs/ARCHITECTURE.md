@@ -252,3 +252,304 @@ async def main():
    - Response caching
    - Batch processing where applicable
    - Asynchronous operations
+
+## Detailed Implementation Examples
+
+### 1. Custom Input Handler Implementation
+```python
+from sunonah.input_handlers import BaseInputHandler
+from sunonah.models import InputConfig
+
+class CustomInputHandler(BaseInputHandler):
+    def __init__(self, config: InputConfig):
+        super().__init__(config)
+        self.preprocessors = []
+        
+    async def process_text(self, text: str) -> str:
+        # Custom text preprocessing
+        normalized = text.lower().strip()
+        
+        # Apply custom filters
+        for preprocessor in self.preprocessors:
+            normalized = await preprocessor(normalized)
+            
+        return normalized
+        
+    async def validate_input(self, text: str) -> bool:
+        # Custom validation logic
+        if not text or len(text.strip()) == 0:
+            raise ValueError("Empty input")
+        if len(text) > self.config.max_length:
+            raise ValueError("Input too long")
+        return True
+
+# Usage Example
+config = InputConfig(max_length=1000, language="en")
+handler = CustomInputHandler(config)
+```
+
+### 2. Context Management with Vector Store
+```python
+from sunonah.memory import VectorStore
+from sunonah.models import ContextConfig
+
+class AdvancedContextManager:
+    def __init__(self, config: ContextConfig):
+        self.vector_store = VectorStore()
+        self.config = config
+        self.current_context = []
+        
+    async def add_to_context(self, message: str):
+        # Embed and store message
+        embedding = await self.vector_store.embed(message)
+        self.vector_store.store(embedding)
+        
+        # Update current context
+        self.current_context.append({
+            'text': message,
+            'timestamp': time.time(),
+            'embedding': embedding
+        })
+        
+        # Maintain context window
+        if len(self.current_context) > self.config.max_context:
+            self.current_context.pop(0)
+            
+    async def get_relevant_context(self, query: str) -> list:
+        # Get similar contexts
+        query_embedding = await self.vector_store.embed(query)
+        similar = self.vector_store.search(
+            query_embedding,
+            k=self.config.max_results
+        )
+        return similar
+
+# Usage Example
+config = ContextConfig(max_context=10, max_results=3)
+context_manager = AdvancedContextManager(config)
+```
+
+### 3. Advanced Response Generation
+```python
+from sunonah.models import ResponseConfig
+from sunonah.llms import LLMEngine
+
+class AdvancedResponseGenerator:
+    def __init__(self, config: ResponseConfig):
+        self.config = config
+        self.llm_engine = LLMEngine()
+        self.fallback_responses = []
+        
+    async def generate_response(self, 
+                              context: str,
+                              max_retries: int = 3) -> str:
+        for attempt in range(max_retries):
+            try:
+                # Generate primary response
+                response = await self.llm_engine.generate(
+                    context,
+                    temperature=self.config.temperature,
+                    max_tokens=self.config.max_tokens
+                )
+                
+                # Validate response
+                if await self.validate_response(response):
+                    return response
+                    
+            except Exception as e:
+                print(f"Attempt {attempt + 1} failed: {str(e)}")
+                
+        # Fallback if all attempts fail
+        return self.get_fallback_response()
+        
+    async def validate_response(self, response: str) -> bool:
+        # Length check
+        if len(response) < self.config.min_length:
+            return False
+            
+        # Content check
+        if not self.check_content_safety(response):
+            return False
+            
+        return True
+
+# Usage Example
+config = ResponseConfig(
+    temperature=0.7,
+    max_tokens=100,
+    min_length=10
+)
+generator = AdvancedResponseGenerator(config)
+```
+
+## Additional Component Diagrams
+
+### 1. Vector Store Architecture
+```mermaid
+graph TD
+    A[Input Text] --> B[Embedding Model]
+    B --> C[Vector Embedding]
+    C --> D[Vector Store]
+    D --> E[Index Manager]
+    E --> F[Vector Search]
+    F --> G[Similarity Matching]
+    G --> H[Retrieved Context]
+    
+    subgraph Storage
+    I[Primary Store] --> D
+    J[Cache Layer] --> D
+    end
+```
+
+### 2. Response Generation Pipeline
+```mermaid
+graph LR
+    A[Context] --> B[Template Selection]
+    B --> C[Parameter Setting]
+    C --> D[Generation]
+    D --> E[Validation]
+    E --> F[Formatting]
+    F --> G[Final Response]
+    
+    H[Safety Checks] --> E
+    I[Quality Metrics] --> E
+```
+
+### 3. Memory Management System
+```mermaid
+graph TD
+    A[New Input] --> B[Memory Router]
+    B --> C[Short-term Memory]
+    B --> D[Long-term Memory]
+    
+    C --> E[In-Memory Cache]
+    D --> F[Vector Store]
+    
+    E --> G[Context Window]
+    F --> G
+    
+    G --> H[Context Selection]
+    H --> I[Final Context]
+```
+
+## Specific Use Cases
+
+### 1. Customer Service Bot
+```python
+# Initialize specialized customer service assistant
+customer_service = Assistant(
+    name="customer_support",
+    llm_config={
+        "provider": "local",
+        "model": "dialogpt",
+        "temperature": 0.5,
+        "context_window": 5
+    }
+)
+
+# Add specialized knowledge base
+customer_service.add_knowledge_base(
+    documents=[
+        "FAQ.md",
+        "product_info.json",
+        "support_guidelines.txt"
+    ],
+    index_type="semantic"
+)
+
+# Configure response templates
+customer_service.add_response_templates({
+    "greeting": "Welcome to {company} support! How can I help you today?",
+    "farewell": "Thank you for contacting {company} support. Is there anything else I can help you with?",
+    "escalation": "I'll connect you with a human agent. Please hold."
+})
+
+# Run the assistant
+async def handle_customer():
+    async for response in customer_service.chat():
+        if response.needs_escalation:
+            await escalate_to_human()
+        else:
+            await send_response(response)
+```
+
+### 2. Meeting Summarizer
+```python
+# Initialize meeting summarizer
+meeting_assistant = Assistant(
+    name="meeting_summarizer",
+    llm_config={
+        "provider": "openai",
+        "model": "gpt-4",
+        "temperature": 0.3
+    }
+)
+
+# Configure summarization task
+meeting_assistant.add_task(
+    task_type="summarization",
+    config={
+        "format": "bullet_points",
+        "max_length": 500,
+        "key_points": True,
+        "action_items": True
+    }
+)
+
+# Process meeting transcript
+async def summarize_meeting(transcript: str):
+    summary = await meeting_assistant.summarize(
+        text=transcript,
+        metadata={
+            "meeting_type": "weekly_standup",
+            "participants": ["Alice", "Bob", "Charlie"],
+            "date": "2025-11-04"
+        }
+    )
+    return summary.get_formatted()
+```
+
+### 3. Multi-Modal Assistant
+```python
+# Initialize multi-modal assistant
+multimodal_assistant = Assistant(
+    name="multi_modal",
+    llm_config={
+        "provider": "local",
+        "model": "dialogpt",
+        "temperature": 0.7
+    }
+)
+
+# Configure multiple input/output handlers
+multimodal_assistant.configure_io(
+    input_handlers=[
+        TextInputHandler(),
+        VoiceInputHandler(model="whisper"),
+        ImageInputHandler(model="clip")
+    ],
+    output_handlers=[
+        TextOutputHandler(),
+        SpeechOutputHandler(voice="en-US-Neural2-F"),
+        ImageOutputHandler()
+    ]
+)
+
+# Process multi-modal input
+async def process_input(input_data: dict):
+    if input_data.get("voice"):
+        text = await multimodal_assistant.transcribe(
+            input_data["voice"]
+        )
+    elif input_data.get("image"):
+        text = await multimodal_assistant.describe_image(
+            input_data["image"]
+        )
+    else:
+        text = input_data.get("text", "")
+        
+    response = await multimodal_assistant.generate_response(
+        text,
+        output_format=input_data.get("preferred_format", "text")
+    )
+    return response
