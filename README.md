@@ -15,102 +15,167 @@ SUNONAH is a versatile conversational AI framework that enables natural voice an
 
 ## System Architecture
 
-### Overview
+### High-Level System Overview
 ```mermaid
 graph TD
-    User[User Input] --> InputHandler[Input Handler]
-    InputHandler --> TextProcessor[Text Processor]
-    
-    subgraph Core Agent
-        TextProcessor --> ContextManager[Context Manager]
-        ContextManager --> LLMEngine[LLM Engine]
-        LLMEngine --> ResponseGenerator[Response Generator]
-        ContextManager <--> Memory[Memory/Cache]
+    subgraph "User Interfaces"
+        Phone[Phone Call]
+        Chat[Chat Interface]
+        API[API Integration]
     end
-    
-    ResponseGenerator --> OutputHandler[Output Handler]
-    OutputHandler --> UserResponse[User Response]
-    Memory <--> VectorStore[Vector Store]
-```
 
-### Input Processing Flow
-```mermaid
-graph LR
-    A[User Input] --> B[Input Handler]
-    B --> C[Text Normalizer]
-    B --> D[Speech-to-Text]
-    C --> E[Language Detection]
-    D --> E
-    E --> F[Preprocessed Input]
-```
-
-### Memory Management System
-```mermaid
-graph TD
-    A[New Input] --> B[Memory Router]
-    B --> C[Short-term Memory]
-    B --> D[Long-term Memory]
-    
-    C --> E[In-Memory Cache]
-    D --> F[Vector Store]
-    
-    E --> G[Context Window]
-    F --> G
-    
-    G --> H[Context Selection]
-    H --> I[Final Context]
-```
-
-### Response Generation Pipeline
-```mermaid
-graph LR
-    A[Context] --> B[Template Selection]
-    B --> C[Parameter Setting]
-    C --> D[Generation]
-    D --> E[Validation]
-    E --> F[Formatting]
-    F --> G[Final Response]
-    
-    H[Safety Checks] --> E
-    I[Quality Metrics] --> E
-```
-
-### Multi-Agent Collaboration System
-```mermaid
-graph TD
-    A[User Query] --> B[Task Distributor]
-    B --> C[Agent 1: Research]
-    B --> D[Agent 2: Analysis]
-    B --> E[Agent 3: Generation]
-    C --> F[Aggregator]
-    D --> F
-    E --> F
-    F --> G[Final Response]
-    
-    subgraph "Communication Bus"
-    H[Agent Registry]
-    I[Message Queue]
-    J[State Manager]
+    subgraph "Input Processing"
+        STT[Speech-to-Text Service]
+        TextNorm[Text Normalizer]
+        LangDetect[Language Detection]
     end
+
+    subgraph "Core Orchestration"
+        CO[Central Orchestrator]
+        TaskQ[Task Queue]
+        StateM[State Manager]
+    end
+
+    subgraph "Agent System"
+        GA[Generative AI Engine]
+        KB[Knowledge Base]
+        CM[Context Manager]
+        
+        subgraph "Specialized Agents"
+            SA1[Task Agent]
+            SA2[Conversation Agent]
+            SA3[Support Agent]
+        end
+    end
+
+    subgraph "Output Processing"
+        TTS[Text-to-Speech Service]
+        ResponseF[Response Formatter]
+        QA[Quality Assurance]
+    end
+
+    subgraph "Enterprise Integration"
+        CRM[CRM Systems]
+        ERP[ERP Integration]
+        Analytics[Analytics Engine]
+    end
+
+    %% Input Flow
+    Phone --> STT
+    Chat --> TextNorm
+    API --> TextNorm
+    STT --> TextNorm
+    TextNorm --> LangDetect
+    LangDetect --> CO
+
+    %% Orchestration Flow
+    CO --> TaskQ
+    TaskQ --> StateM
+    StateM --> GA
+
+    %% Agent Processing
+    GA <--> KB
+    GA <--> CM
+    GA --> SA1
+    GA --> SA2
+    GA --> SA3
+    SA1 --> ResponseF
+    SA2 --> ResponseF
+    SA3 --> ResponseF
+
+    %% Output Flow
+    ResponseF --> QA
+    QA --> TTS
+    QA --> Chat
+    QA --> API
+
+    %% Enterprise Integration
+    CO <--> CRM
+    CO <--> ERP
+    CO --> Analytics
+
+    style GA fill:#f9f,stroke:#333,stroke-width:2px
+    style CO fill:#bbf,stroke:#333,stroke-width:2px
+    style Phone fill:#dfd
+    style Chat fill:#dfd
+    style API fill:#dfd
 ```
 
-### Enterprise Integration Architecture
+### Voice Agent Implementation Details
 ```mermaid
 graph TD
-    A[SUNONAH Agent] --> B[Integration Layer]
-    B --> C[CRM Systems]
-    B --> D[ERP Systems]
-    B --> E[Ticketing Systems]
-    B --> F[Knowledge Bases]
-    
-    subgraph Security Layer
-    G[Authentication]
-    H[Authorization]
-    I[Encryption]
+    subgraph "Telephony Integration"
+        Phone[Phone Call] --> Gateway[Telephony Gateway]
+        Gateway --> CallHandler[Call Handler]
+        CallHandler --> SessionMgr[Session Manager]
     end
+
+    subgraph "Voice Processing"
+        STT[Speech-to-Text]
+        VAD[Voice Activity Detection]
+        NR[Noise Reduction]
+        TTS[Text-to-Speech]
+    end
+
+    subgraph "Core AI Processing"
+        LLM[LLM Engine]
+        Context[Context Manager]
+        KB[Knowledge Base]
+        
+        subgraph "Agent Functions"
+            Intent[Intent Analysis]
+            Dialog[Dialog Management]
+            Response[Response Generation]
+        end
+    end
+
+    %% Call Flow
+    CallHandler --> VAD
+    VAD --> NR
+    NR --> STT
+    STT --> Intent
+    Intent --> LLM
+    LLM <--> Context
+    LLM <--> KB
+    LLM --> Dialog
+    Dialog --> Response
+    Response --> TTS
+    TTS --> CallHandler
+
+    %% Session Management
+    SessionMgr --> Context
+    SessionMgr --> Dialog
+
+    style LLM fill:#f9f,stroke:#333,stroke-width:2px
+    style STT fill:#bbf,stroke:#333,stroke-width:2px
+    style TTS fill:#bbf,stroke:#333,stroke-width:2px
 ```
 
-These diagrams illustrate the key components and flows of the SUNONAH framework. For more detailed technical information, please refer to the [Architecture Documentation](docs/ARCHITECTURE.md).
+### Call Flow Sequence
+```mermaid
+sequenceDiagram
+    participant U as User/Caller
+    participant T as Telephony Gateway
+    participant S as Speech Services
+    participant A as AI Engine
+    participant V as Voice Synthesis
+
+    U->>T: Incoming Call
+    T->>S: Start Speech Recognition
+    
+    loop Conversation
+        U->>S: Voice Input
+        S->>A: Transcribed Text
+        A->>A: Process & Generate Response
+        A->>V: Generate Speech
+        V->>U: Voice Response
+    end
+
+    U->>T: End Call
+    T->>A: Save Conversation Context
+```
+
+These diagrams illustrate the voice-specific components and flows of the SUNONAH framework. For more detailed technical information, please refer to the [Architecture Documentation](docs/ARCHITECTURE.md).
 
 ## Prerequisites
 
